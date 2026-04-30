@@ -207,7 +207,7 @@ static void handle_root() {
 }
 
 static void handle_status() {
-    DynamicJsonDocument doc(512);
+    JsonDocument doc;
     time_t now = time(nullptr);
     struct tm* ti = localtime(&now);
     char tbuf[10];
@@ -246,7 +246,7 @@ static void handle_status() {
 }
 
 static void handle_config_get() {
-    StaticJsonDocument<512> doc;
+    JsonDocument doc;
     doc["humidity_on"]         = g_cfg->humidity_on;
     doc["humidity_hysteresis"] = g_cfg->humidity_hysteresis;
     doc["humidity_fan_max"]    = g_cfg->humidity_fan_max;
@@ -265,21 +265,27 @@ static void handle_config_get() {
 }
 
 static void handle_config_post() {
-    if (!server.hasArg("plain")) { server.send(400); return; }
-    StaticJsonDocument<512> doc;
-    if (deserializeJson(doc, server.arg("plain"))) { server.send(400); return; }
-    if (doc.containsKey("humidity_on"))         g_cfg->humidity_on         = doc["humidity_on"];
-    if (doc.containsKey("humidity_hysteresis")) g_cfg->humidity_hysteresis = doc["humidity_hysteresis"];
-    if (doc.containsKey("humidity_fan_max"))    g_cfg->humidity_fan_max    = doc["humidity_fan_max"];
-    if (doc.containsKey("temp_min_dehum"))      g_cfg->temp_min_dehum      = doc["temp_min_dehum"];
-    if (doc.containsKey("temp_heater_low"))     g_cfg->temp_heater_low     = doc["temp_heater_low"];
-    if (doc.containsKey("temp_heater_high"))    g_cfg->temp_heater_high    = doc["temp_heater_high"];
-    if (doc.containsKey("temp_fan_delta"))      g_cfg->temp_fan_delta      = doc["temp_fan_delta"];
-    if (doc.containsKey("heater_default_min"))  g_cfg->heater_default_min  = doc["heater_default_min"];
-    if (doc.containsKey("k_predictive"))        g_cfg->k_predictive        = doc["k_predictive"];
-    if (doc.containsKey("rate_min"))            g_cfg->rate_min            = doc["rate_min"];
-    if (doc.containsKey("min_run_dehum_min"))   g_cfg->min_run_dehum_min   = doc["min_run_dehum_min"];
-    if (doc.containsKey("humidity_correction")) g_cfg->humidity_correction = doc["humidity_correction"];
+    if (!server.hasArg("plain")) {
+        server.send(400, "text/plain", "Body manquant");
+        return;
+    }
+    JsonDocument doc;
+    if (deserializeJson(doc, server.arg("plain"))) {
+        server.send(400, "text/plain", "JSON invalide");
+        return;
+    }
+    if (doc["humidity_on"].is<float>())         g_cfg->humidity_on         = doc["humidity_on"];
+    if (doc["humidity_hysteresis"].is<float>()) g_cfg->humidity_hysteresis = doc["humidity_hysteresis"];
+    if (doc["humidity_fan_max"].is<float>())    g_cfg->humidity_fan_max    = doc["humidity_fan_max"];
+    if (doc["temp_min_dehum"].is<float>())      g_cfg->temp_min_dehum      = doc["temp_min_dehum"];
+    if (doc["temp_heater_low"].is<float>())     g_cfg->temp_heater_low     = doc["temp_heater_low"];
+    if (doc["temp_heater_high"].is<float>())    g_cfg->temp_heater_high    = doc["temp_heater_high"];
+    if (doc["temp_fan_delta"].is<float>())      g_cfg->temp_fan_delta      = doc["temp_fan_delta"];
+    if (doc["heater_default_min"].is<int>())    g_cfg->heater_default_min  = doc["heater_default_min"];
+    if (doc["k_predictive"].is<float>())        g_cfg->k_predictive        = doc["k_predictive"];
+    if (doc["rate_min"].is<float>())            g_cfg->rate_min            = doc["rate_min"];
+    if (doc["min_run_dehum_min"].is<int>())     g_cfg->min_run_dehum_min   = doc["min_run_dehum_min"];
+    if (doc["humidity_correction"].is<float>()) g_cfg->humidity_correction = doc["humidity_correction"];
     storage_save_config(*g_cfg);
     server.send(200, "text/plain", "OK");
 }
@@ -311,9 +317,15 @@ static void handle_dehum() {
 }
 
 static void handle_heater() {
-    if (!server.hasArg("plain")) { server.send(400); return; }
-    StaticJsonDocument<64> doc;
-    if (deserializeJson(doc, server.arg("plain"))) { server.send(400); return; }
+    if (!server.hasArg("plain")) {
+        server.send(400, "text/plain", "Body manquant");
+        return;
+    }
+    JsonDocument doc;
+    if (deserializeJson(doc, server.arg("plain"))) {
+        server.send(400, "text/plain", "JSON invalide");
+        return;
+    }
     int mins = doc["minutes"] | 0;
     if (mins > 0) {
         g_state->heater_manual_off_at = time(nullptr) + (long)mins * 60L;

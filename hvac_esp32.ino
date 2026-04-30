@@ -97,6 +97,12 @@ static bool sensors_read() {
 
 // ── Boucle de controle (equivalent au mode --cron) ───────────────
 static void control_run() {
+    // Garde NTP : sans heure valide, le calcul predictif et les timers
+    // se basent sur des deltas erratiques et l'etat sauvegarde devient corrompu.
+    if (time(nullptr) < 100000) {
+        Serial.println("[HVAC] NTP non synchronise, attente");
+        return;
+    }
     if (!sensors_read()) {
         Serial.println("[HVAC] Erreur lecture capteurs");
         return;
@@ -146,8 +152,11 @@ void setup() {
     if (!bme_ok)
         Serial.println("AVERTISSEMENT: capteurs BME280 non initialises — controle suspendu");
 
-    // Connexion WiFi
+    // Connexion WiFi (avec auto-reconnect)
     Serial.printf("Connexion WiFi: %s\n", WIFI_SSID);
+    WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
+    WiFi.persistent(true);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     for (int i = 0; i < 30 && WiFi.status() != WL_CONNECTED; i++) {
         delay(500);
@@ -168,7 +177,7 @@ void setup() {
 
     web_begin(g_config, g_state, g_sensors, g_gpio, g_decisions);
 
-    // Premiere lecture immediate
+    // Premiere lecture immediate (control_run() s'auto-protege si NTP pas sync)
     if (bme_ok) {
         control_run();
         last_control_ms = millis();

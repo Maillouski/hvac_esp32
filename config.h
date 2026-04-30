@@ -10,6 +10,8 @@
 #define NTP_DAYLIGHT_OFFSET_SEC (3600)
 
 // ── GPIO (evite les pins 6-11 reservés au flash SPI) ─────────────
+// NOTE: sur ESP32-WROVER (avec PSRAM), GPIO 16 et 17 sont utilises
+// par la PSRAM. Utilise des pins libres (ex: 25, 26, 27) sur WROVER.
 #define PIN_FAN     4
 #define PIN_DEHUM   16
 #define PIN_HEATER  17
