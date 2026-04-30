@@ -1,25 +1,72 @@
-/*
- * HVAC Hangar — Port ESP32
- * Port Arduino du script hvac.py (Raspberry Pi) pour ESP32.
+/* ═══════════════════════════════════════════════════════════════════
+ *  HVAC Hangar — Port ESP32
+ *  Port Arduino du script hvac.py (Raspberry Pi) pour ESP32.
+ * ═══════════════════════════════════════════════════════════════════
  *
- * Equivalent fonctionnel:
- *   hvac.py --cron  ->  boucle de controle toutes les 60s (loop)
- *   hvac.py         ->  dashboard web sur port 80 (IP affichee en Serial)
- *   hvac.py heater  ->  bouton ON/OFF dans le dashboard web
+ *  EQUIVALENT FONCTIONNEL hvac.py -> ESP32
+ *    hvac.py --cron   ->  boucle de controle toutes les 60s (loop)
+ *    hvac.py          ->  dashboard web sur port 80
+ *    hvac.py heater   ->  boutons ON/OFF dans le dashboard web
  *
- * Librairies requises (Arduino Library Manager):
- *   - Adafruit BME280 Library   (Adafruit)
- *   - Adafruit Unified Sensor   (Adafruit)
- *   - ArduinoJson               (Benoit Blanchon)
+ * ───────────────────────────────────────────────────────────────────
+ *  1. CORE BOARD A INSTALLER (Arduino IDE -> Boards Manager)
+ * ───────────────────────────────────────────────────────────────────
+ *    Package : "esp32" by Espressif Systems
+ *    URL JSON: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+ *    Version testee : 3.3.8
  *
- * Incluses avec le core ESP32:
- *   - WebServer, Preferences, WiFi, Wire
+ * ───────────────────────────────────────────────────────────────────
+ *  2. LIBRAIRIES A INSTALLER (Arduino IDE -> Library Manager)
+ * ───────────────────────────────────────────────────────────────────
+ *    Adafruit BME280 Library      v2.3.0   (Adafruit)
+ *    Adafruit Unified Sensor      v1.1.15  (Adafruit)  [dependance BME280]
+ *    Adafruit BusIO               v1.17.4  (Adafruit)  [dependance BME280]
+ *    ArduinoJson                  v7.4.3   (Benoit Blanchon)
  *
- * Connexion BME280 (I2C):
- *   SDA -> GPIO 21
- *   SCL -> GPIO 22
- *   Capteur interieur : adresse 0x77
- *   Capteur exterieur : adresse 0x76
+ *    INCLUSES avec le core ESP32 (rien a installer) :
+ *      WiFi.h, WebServer.h, Preferences.h, Wire.h, time.h
+ *
+ * ───────────────────────────────────────────────────────────────────
+ *  3. PARAMETRES DE COMPILATION (Arduino IDE -> Tools)
+ * ───────────────────────────────────────────────────────────────────
+ *    Board              : "ESP32 Dev Module"  (FQBN esp32:esp32:esp32)
+ *    Upload Speed       : 921600
+ *    CPU Frequency      : 240MHz (WiFi/BT)
+ *    Flash Frequency    : 80MHz
+ *    Flash Mode         : QIO
+ *    Flash Size         : 4MB (32Mb)
+ *    Partition Scheme   : Default 4MB with spiffs (1.2MB APP / 1.5MB SPIFFS)
+ *    Core Debug Level   : None
+ *    PSRAM              : Disabled       (Enabled UNIQUEMENT si module WROVER)
+ *
+ *    Empreinte actuelle : 78% flash (~1.03 MB), 15% RAM (~50 KB)
+ *
+ * ───────────────────────────────────────────────────────────────────
+ *  4. CABLAGE
+ * ───────────────────────────────────────────────────────────────────
+ *    BME280 interieur  (I2C 0x77)  ┐
+ *    BME280 exterieur  (I2C 0x76)  ┴── SDA -> GPIO 21
+ *                                      SCL -> GPIO 22
+ *                                      VCC -> 3.3V
+ *                                      GND -> GND
+ *
+ *    Relais ventilateur            -> GPIO 4   (PIN_FAN)
+ *    Relais deshumidificateur      -> GPIO 16  (PIN_DEHUM)
+ *    Relais chauffage              -> GPIO 17  (PIN_HEATER)
+ *
+ *    ATTENTION : sur ESP32-WROVER (avec PSRAM), GPIO 16 et 17 sont
+ *    reserves a la PSRAM. Reaffecter PIN_DEHUM/PIN_HEATER vers
+ *    GPIO 25/26/27 dans config.h si tu utilises un WROVER.
+ *
+ * ───────────────────────────────────────────────────────────────────
+ *  5. CONFIGURATION AVANT FLASH (config.h)
+ * ───────────────────────────────────────────────────────────────────
+ *    WIFI_SSID / WIFI_PASSWORD     -> identifiants du reseau WiFi
+ *    NTP_GMT_OFFSET_SEC            -> fuseau horaire (defaut: -5h EST)
+ *    NTP_DAYLIGHT_OFFSET_SEC       -> heure d'ete (defaut: 3600)
+ *    PIN_FAN / PIN_DEHUM / PIN_HEATER  -> reaffecter selon cablage
+ *
+ * ═══════════════════════════════════════════════════════════════════
  */
 
 #include "config.h"
